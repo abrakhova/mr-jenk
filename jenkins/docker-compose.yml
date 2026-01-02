@@ -1,0 +1,28 @@
+# Jenkins CI/CD Server
+# Custom Jenkins with Maven, Node.js, and Docker pre-installed
+
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mr-jenk-jenkins:latest
+    container_name: jenkins
+    restart: unless-stopped
+    privileged: true
+    user: root
+    ports:
+      - "8090:8080"      # Jenkins web UI (using 8090 to avoid conflict with API Gateway)
+      - "50000:50000"    # Jenkins agent port (for distributed builds)
+    volumes:
+      # Persist Jenkins data (jobs, plugins, configuration)
+      - jenkins_home:/var/jenkins_home
+      # Mount Docker socket so Jenkins can build Docker images
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+
+volumes:
+  jenkins_home:
+    name: mr-jenk-jenkins-data
+

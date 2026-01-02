@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -26,6 +27,8 @@ class MediaEventProducerTest {
     @BeforeEach
     void setUp() {
         producer = new MediaEventProducer(kafkaTemplate);
+        // Set the @Value field that would normally be injected by Spring
+        ReflectionTestUtils.setField(producer, "mediaEventsTopic", "media-events");
     }
 
     @Test
