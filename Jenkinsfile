@@ -1,51 +1,58 @@
-// Jenkinsfile for mr-jenk E-commerce Platform
-// This pipeline: checkouts → builds → tests → deploys
-// Audit Requirements Addressed:
+// Jenkinsfile for SafeZone E-commerce Platform
+// This pipeline: checkouts → builds → tests → analyzes → deploys
+//
+// mr-jenk Audit Requirements:
 // - ✅ Pipeline runs from start to finish
 // - ✅ Tests run automatically and halt pipeline on failure
 // - ✅ Deployment with rollback strategy
 // - ✅ Notifications on build events
 // - ✅ Test reports stored for future reference
+//
+// SafeZone Audit Requirements:
+// - ✅ SonarQube integration for code quality analysis
+// - ✅ Pipeline fails if quality gate fails
+// - ✅ Continuous monitoring via CI/CD integration
+// - ✅ Code review process via Quality Gates
 
 pipeline {
     agent any  // Run on any available Jenkins agent
-    
+
     // Environment variables available to all stages
     environment {
         // Project info
-        PROJECT_NAME = 'mr-jenk'
-        
+        PROJECT_NAME = 'safe-zone'
+
         // Docker image prefix
         DOCKER_REGISTRY = 'mr-jenk'
-        
+
         // Build info
         BUILD_VERSION = "${env.BUILD_NUMBER}"
-        
+
         // SSL keystore password
         KEYSTORE_PASSWORD = 'changeit'
     }
-    
+
     // Build options
     options {
         // Keep only last 10 builds to save disk space
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        
+
         // Add timestamps to console output
         timestamps()
-        
+
         // Timeout the entire pipeline after 30 minutes
         timeout(time: 30, unit: 'MINUTES')
     }
-    
+
     // Triggers - automatically run on push
     triggers {
         // Poll SCM every minute (backup if webhook fails)
         pollSCM('H/5 * * * *')
-        
+
         // GitHub webhook trigger (primary method)
         // Requires GitHub Webhook plugin and webhook configuration
     }
-    
+
     stages {
         // ==========================================
         // STAGE 1: CHECKOUT
@@ -55,7 +62,7 @@ pipeline {
             steps {
                 echo '📥 Checking out source code...'
                 checkout scm
-                
+
                 // Show what we're building
                 sh '''
                     echo "Build #${BUILD_NUMBER}"
@@ -64,7 +71,7 @@ pipeline {
                 '''
             }
         }
-        
+
         // ==========================================
         // STAGE 2: GENERATE SSL CERTIFICATES
         // Generate keystore for API Gateway and certs for Frontend
@@ -73,11 +80,11 @@ pipeline {
         stage('Generate SSL Certificates') {
             steps {
                 echo '🔐 Generating SSL certificates...'
-                
+
                 // Generate API Gateway keystore (must be in resources before build)
                 sh '''
                     mkdir -p backend/api-gateway/src/main/resources
-                    
+
                     # Only generate if doesn't exist
                     if [ ! -f backend/api-gateway/src/main/resources/keystore.p12 ]; then
                         keytool -genkeypair -alias api-gateway \
@@ -93,7 +100,7 @@ pipeline {
                         echo "✅ API Gateway keystore already exists"
                     fi
                 '''
-                
+
                 // Generate Frontend SSL certificates
                 dir('frontend') {
                     sh '''
@@ -107,7 +114,7 @@ pipeline {
                 }
             }
         }
-        
+
         // ==========================================
         // STAGE 3: BUILD SHARED MODULE
         // Build shared module first (other services depend on it)
@@ -120,7 +127,7 @@ pipeline {
                 }
             }
         }
-        
+
         // ==========================================
         // STAGE 4: BUILD BACKEND SERVICES (PARALLEL)
         // Compile all Java microservices with Maven
@@ -164,7 +171,7 @@ pipeline {
                 }
             }
         }
-        
+
         // ==========================================
         // STAGE 5: BUILD FRONTEND
         // Install dependencies and build Angular app
@@ -172,7 +179,7 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 echo '🎨 Building frontend...'
-                
+
                 dir('frontend') {
                     sh '''
                         npm ci --silent
@@ -181,7 +188,7 @@ pipeline {
                 }
             }
         }
-        
+
         // ==========================================
         // STAGE 6: TEST BACKEND
         // Run JUnit tests for all Java services
@@ -190,17 +197,17 @@ pipeline {
         stage('Test Backend') {
             steps {
                 echo '🧪 Running backend tests...'
-                
+
                 // Run tests for User Service
                 dir('backend/services/user') {
                     sh '../../mvnw test -q'
                 }
-                
+
                 // Run tests for Product Service
                 dir('backend/services/product') {
                     sh '../../mvnw test -q'
                 }
-                
+
                 // Run tests for Media Service
                 dir('backend/services/media') {
                     sh '../../mvnw test -q'
@@ -213,7 +220,7 @@ pipeline {
                 }
             }
         }
-        
+
         // ==========================================
         // STAGE 7: TEST FRONTEND
         // Run Karma/Jasmine tests for Angular
@@ -221,7 +228,7 @@ pipeline {
         stage('Test Frontend') {
             steps {
                 echo '🧪 Running frontend tests...'
-                
+
                 dir('frontend') {
                     sh '''
                         # Run tests with headless Chrome (CI-friendly with --no-sandbox)
@@ -230,9 +237,71 @@ pipeline {
                 }
             }
         }
-        
+
         // ==========================================
-        // STAGE 8: BUILD DOCKER IMAGES
+        // STAGE 8: SONARQUBE ANALYSIS
+        // Analyze code quality and security with SonarQube
+        // Pipeline fails if quality gate fails
+        // ==========================================
+        stage('SonarQube Analysis') {
+            steps {
+                echo '🔍 Running SonarQube analysis...'
+
+                // Use SonarQube token from Jenkins credentials
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    // Analyze backend services
+                    dir('backend') {
+                        sh '''
+                            ../backend/mvnw sonar:sonar \
+                                -Dsonar.projectKey=safe-zone \
+                                -Dsonar.projectName="SafeZone E-commerce Platform" \
+                                -Dsonar.host.url=http://host.docker.internal:9000 \
+                                -Dsonar.login=${SONAR_TOKEN} \
+                                -Dsonar.java.binaries=**/target/classes \
+                                -q
+                        '''
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // STAGE 9: QUALITY GATE
+        // Wait for SonarQube quality gate result
+        // Fails the pipeline if quality gate fails
+        // ==========================================
+        stage('Quality Gate') {
+            steps {
+                echo '🚦 Checking SonarQube Quality Gate...'
+
+                // Wait for quality gate result (timeout after 5 minutes)
+                timeout(time: 5, unit: 'MINUTES') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            echo "Waiting for SonarQube analysis to complete..."
+                            sleep 10
+
+                            # Check quality gate status
+                            QUALITY_GATE=$(curl -s -u ${SONAR_TOKEN}: \
+                                "http://host.docker.internal:9000/api/qualitygates/project_status?projectKey=safe-zone" \
+                                | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+                            echo "Quality Gate Status: ${QUALITY_GATE}"
+
+                            if [ "$QUALITY_GATE" != "OK" ]; then
+                                echo "❌ Quality Gate FAILED!"
+                                exit 1
+                            else
+                                echo "✅ Quality Gate PASSED!"
+                            fi
+                        '''
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // STAGE 10: BUILD DOCKER IMAGES
         // Create Docker images for all services
         // ==========================================
         stage('Build Docker Images') {
@@ -241,21 +310,21 @@ pipeline {
                 sh 'docker-compose -f docker-compose.yml build --parallel'
             }
         }
-        
+
         // ==========================================
-        // STAGE 9: DEPLOY
+        // STAGE 11: DEPLOY
         // Deploy the application with rollback capability
         // ==========================================
         stage('Deploy') {
             steps {
                 echo '🚀 Deploying application...'
-                
+
                 // Stop existing containers (graceful shutdown)
                 sh 'docker-compose -f docker-compose.yml down --timeout 30 || true'
-                
+
                 // Start new containers
                 sh 'docker-compose -f docker-compose.yml up -d'
-                
+
                 // Wait for services to be healthy
                 sh '''
                     echo "Waiting for services to start..."
@@ -264,26 +333,26 @@ pipeline {
                 '''
             }
         }
-        
+
         // ==========================================
-        // STAGE 10: HEALTH CHECK
+        // STAGE 12: HEALTH CHECK
         // Verify deployment was successful
         // ==========================================
         stage('Health Check') {
             steps {
                 echo '🏥 Checking service health...'
-                
+
                 sh '''
                     echo "Checking Eureka Server..."
                     curl -sf http://localhost:8761/actuator/health || echo "Eureka not ready yet"
-                    
+
                     echo ""
                     echo "All health checks completed!"
                 '''
             }
         }
     }
-    
+
     // ==========================================
     // POST-BUILD ACTIONS
     // Notifications and cleanup
@@ -295,7 +364,7 @@ pipeline {
             ✅ BUILD SUCCESSFUL!
             ✅ ========================================
             '''
-            
+
             // Email notification on success
             emailext (
                 subject: "✅ Jenkins Build SUCCESS: ${PROJECT_NAME} #${BUILD_NUMBER}",
@@ -313,18 +382,18 @@ pipeline {
                 to: '${DEFAULT_RECIPIENTS}'
             )
         }
-        
+
         failure {
             echo '''
             ❌ ========================================
             ❌ BUILD FAILED!
             ❌ ========================================
             '''
-            
+
             // ROLLBACK: Stop any partially deployed containers
             echo '🔄 Initiating rollback - stopping failed deployment...'
             sh 'docker-compose -f docker-compose.yml down 2>/dev/null || true'
-            
+
             // Email notification on failure
             emailext (
                 subject: "❌ Jenkins Build FAILED: ${PROJECT_NAME} #${BUILD_NUMBER}",
@@ -343,11 +412,11 @@ pipeline {
                 to: '${DEFAULT_RECIPIENTS}'
             )
         }
-        
+
         always {
             // Archive test reports for future reference
             archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
-            
+
             // Clean up workspace to save disk space
             cleanWs(cleanWhenNotBuilt: false,
                     deleteDirs: true,
