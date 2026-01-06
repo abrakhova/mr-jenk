@@ -23,6 +23,7 @@ pipeline {
 
         // SSL keystore password
         KEYSTORE_PASSWOR = 'changeit'
+        //test comment
     }
 
     // Build options
