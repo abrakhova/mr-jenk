@@ -22,8 +22,8 @@ pipeline {
         BUILD_VERSION = "${env.BUILD_NUMBER}"
 
         // SSL keystore password
-        KEYSTORE_PASSWOR = 'changeit
-        //test comment
+        KEYSTORE_PASSWORD = 'changeit'
+        //fixed
     }
 
     // Build options
