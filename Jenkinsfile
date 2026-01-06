@@ -63,9 +63,6 @@ pipeline {
                     echo "Branch: ${GIT_BRANCH}"
                     echo "Commit: ${GIT_COMMIT}"
                 '''
-
-                // INTENTIONAL FAILURE FOR TESTING - REMOVE AFTER TEST
-                sh 'exit 1'
             }
         }
 
