@@ -22,7 +22,7 @@ pipeline {
         BUILD_VERSION = "${env.BUILD_NUMBER}"
 
         // SSL keystore password
-        KEYSTORE_PASSWOR = 'changeit'
+        KEYSTORE_PASSWOR = 'changeit
         //test comment
     }
 
