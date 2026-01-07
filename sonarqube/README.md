@@ -16,7 +16,9 @@ docker-compose up -d
 ## Default Credentials
 
 - **Username:** admin
-- **Password:** admin (change on first login)
+- **Password:** admin
+
+> ⚠️ **Security Warning:** The default `admin` / `admin` credentials grant full administrative access. If your SonarQube instance is accessible on any network, leaving default credentials is a serious security risk. **Change the admin password immediately on first login.**
 
 ## Project Configuration
 

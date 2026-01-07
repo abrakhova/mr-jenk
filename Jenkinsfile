@@ -252,11 +252,11 @@ pipeline {
                     // Analyze backend services
                     dir('backend') {
                         sh '''
-                            ../backend/mvnw sonar:sonar \
+                            ./mvnw sonar:sonar \
                                 -Dsonar.projectKey=safe-zone \
                                 -Dsonar.projectName="SafeZone E-commerce Platform" \
                                 -Dsonar.host.url=http://host.docker.internal:9000 \
-                                -Dsonar.login=${SONAR_TOKEN} \
+                                -Dsonar.token=${SONAR_TOKEN} \
                                 -Dsonar.java.binaries=**/target/classes \
                                 -q
                         '''
@@ -281,8 +281,8 @@ pipeline {
                             echo "Waiting for SonarQube analysis to complete..."
                             sleep 10
 
-                            # Check quality gate status
-                            QUALITY_GATE=$(curl -s -u ${SONAR_TOKEN}: \
+                            # Check quality gate status using Bearer token (more secure, not visible in logs)
+                            QUALITY_GATE=$(curl -s -H "Authorization: Bearer ${SONAR_TOKEN}" \
                                 "http://host.docker.internal:9000/api/qualitygates/project_status?projectKey=safe-zone" \
                                 | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
 
