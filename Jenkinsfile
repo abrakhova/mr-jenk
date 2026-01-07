@@ -277,24 +277,27 @@ pipeline {
                 // Wait for quality gate result (timeout after 5 minutes)
                 timeout(time: 5, unit: 'MINUTES') {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                        sh '''
+                        sh """
                             echo "Waiting for SonarQube analysis to complete..."
                             sleep 10
 
-                            # Check quality gate status using Bearer token (more secure, not visible in logs)
-                            QUALITY_GATE=$(curl -s -H "Authorization: Bearer ${SONAR_TOKEN}" \
-                                "http://host.docker.internal:9000/api/qualitygates/project_status?projectKey=safe-zone" \
-                                | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+                            # Check quality gate status
+                            RESPONSE=\$(curl -s -u "${SONAR_TOKEN}:" \\
+                                "http://host.docker.internal:9000/api/qualitygates/project_status?projectKey=safe-zone")
+                            
+                            echo "API Response: \${RESPONSE}"
+                            
+                            QUALITY_GATE=\$(echo "\${RESPONSE}" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-                            echo "Quality Gate Status: ${QUALITY_GATE}"
+                            echo "Quality Gate Status: \${QUALITY_GATE}"
 
-                            if [ "$QUALITY_GATE" != "OK" ]; then
+                            if [ "\${QUALITY_GATE}" != "OK" ]; then
                                 echo "❌ Quality Gate FAILED!"
                                 exit 1
                             else
                                 echo "✅ Quality Gate PASSED!"
                             fi
-                        '''
+                        """
                     }
                 }
             }
