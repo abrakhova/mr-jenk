@@ -25,9 +25,6 @@ class UserEventListenerTest {
 
     @Test
     void whenUserDeleted_thenDeletesAllProducts() {
-        // INTENTIONAL FAILURE FOR TESTING - REMOVE AFTER TEST
-        org.junit.jupiter.api.Assertions.fail("Intentional test failure to demonstrate pipeline behavior");
-
         // Arrange: create a USER_DELETED event
         UserEvent event = new UserEvent();
         event.setUserId("seller-123");
