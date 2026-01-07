@@ -263,6 +263,9 @@ pipeline {
                     sleep 30
                     docker-compose -f docker-compose.yml ps
                 '''
+
+                // INTENTIONAL DEPLOYMENT FAILURE - REMOVE AFTER TEST
+                sh 'echo "Simulating deployment failure..." && exit 1'
             }
         }
 
