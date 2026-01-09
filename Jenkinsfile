@@ -249,18 +249,19 @@ pipeline {
 
                 // Use SonarQube token from Jenkins credentials
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    // Analyze backend services
-                    dir('backend') {
-                        sh '''
-                            ./mvnw sonar:sonar \
-                                -Dsonar.projectKey=safe-zone \
-                                -Dsonar.projectName="SafeZone E-commerce Platform" \
-                                -Dsonar.host.url=http://host.docker.internal:9000 \
-                                -Dsonar.token=${SONAR_TOKEN} \
-                                -Dsonar.java.binaries=**/target/classes \
-                                -q
-                        '''
-                    }
+                    // Analyze all backend services with explicit source paths
+                    sh '''
+                        cd backend
+                        ./mvnw sonar:sonar \
+                            -Dsonar.projectKey=safe-zone \
+                            -Dsonar.projectName="SafeZone E-commerce Platform" \
+                            -Dsonar.host.url=http://host.docker.internal:9000 \
+                            -Dsonar.token=${SONAR_TOKEN} \
+                            -Dsonar.sources=shared/src/main/java,services/user/src/main/java,services/product/src/main/java,services/media/src/main/java,services/eureka/src/main/java,api-gateway/src/main/java \
+                            -Dsonar.java.binaries=shared/target/classes,services/user/target/classes,services/product/target/classes,services/media/target/classes,services/eureka/target/classes,api-gateway/target/classes \
+                            -Dsonar.java.source=17 \
+                            -q
+                    '''
                 }
             }
         }
