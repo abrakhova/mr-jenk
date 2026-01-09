@@ -15,7 +15,7 @@ import java.util.List;
 public class ProductController {
 
     @Autowired
-    private ProductService productServic;
+    private ProductService productService;
 
     // Public endpoints (no authentication required)
     @GetMapping
