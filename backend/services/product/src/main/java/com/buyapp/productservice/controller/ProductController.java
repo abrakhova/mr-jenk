@@ -14,6 +14,9 @@ import java.util.List;
 @RequestMapping("/products")
 public class ProductController {
 
+    // SECURITY ISSUE: Hardcoded password for SonarQube demo
+    private String password = "admin123";
+
     @Autowired
     private ProductService productService;
 
