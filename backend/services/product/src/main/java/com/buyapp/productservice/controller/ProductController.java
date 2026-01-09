@@ -20,6 +20,14 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+    // VULNERABILITY: SQL Injection - for SonarQube demo
+    // This method is intentionally vulnerable to demonstrate security scanning
+    public String unsafeQuery(String userInput) {
+        String query = "SELECT * FROM products WHERE name = '" + userInput + "'";
+        // This concatenation creates SQL injection vulnerability
+        return query;
+    }
+
     // Public endpoints (no authentication required)
     @GetMapping
     public List<ProductDto> getAllProducts() {
