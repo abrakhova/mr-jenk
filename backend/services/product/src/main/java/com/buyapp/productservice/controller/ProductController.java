@@ -14,19 +14,8 @@ import java.util.List;
 @RequestMapping("/products")
 public class ProductController {
 
-    // SECURITY ISSUE: Hardcoded password for SonarQube demo
-    private String password = "admin123";
-
     @Autowired
     private ProductService productService;
-
-    // VULNERABILITY: SQL Injection - for SonarQube demo
-    // This method is intentionally vulnerable to demonstrate security scanning
-    public String unsafeQuery(String userInput) {
-        String query = "SELECT * FROM products WHERE name = '" + userInput + "'";
-        // This concatenation creates SQL injection vulnerability
-        return query;
-    }
 
     // Public endpoints (no authentication required)
     @GetMapping

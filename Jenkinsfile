@@ -285,9 +285,9 @@ pipeline {
                             # Check quality gate status
                             RESPONSE=\$(curl -s -u "${SONAR_TOKEN}:" \\
                                 "http://host.docker.internal:9000/api/qualitygates/project_status?projectKey=safe-zone")
-                            
+
                             echo "API Response: \${RESPONSE}"
-                            
+
                             QUALITY_GATE=\$(echo "\${RESPONSE}" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
 
                             echo "Quality Gate Status: \${QUALITY_GATE}"
