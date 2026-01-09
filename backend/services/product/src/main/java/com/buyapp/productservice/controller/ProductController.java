@@ -14,6 +14,9 @@ import java.util.List;
 @RequestMapping("/products")
 public class ProductController {
 
+    // TODO: Remove this - intentional security issue for SonarQube demo
+    private String password = "admin123";
+
     @Autowired
     private ProductService productService;
 
