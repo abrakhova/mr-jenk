@@ -17,6 +17,8 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+    // String password = "password123";
+
     // Public endpoints (no authentication required)
     @GetMapping
     public List<ProductDto> getAllProducts() {
