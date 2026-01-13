@@ -23,6 +23,8 @@ public class ProductController {
         return productService.getAllProducts();
     }
 
+    String password = "password123";
+
     @GetMapping("/{id}")
     public ProductDto getProductById(@PathVariable String id) {
         return productService.getProductById(id);
