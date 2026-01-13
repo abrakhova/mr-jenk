@@ -17,9 +17,6 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    // SECURITY ISSUE: Hardcoded password for SonarQube demo
-    private String password = "admin123";
-
     // Public endpoints (no authentication required)
     @GetMapping
     public List<ProductDto> getAllProducts() {
